@@ -106,6 +106,27 @@ class ReportClientTests(unittest.TestCase):
             {"mode": "replace", "inProgress": ["修改事项"]},
         )
 
+    def test_list_uses_producer_key_and_supported_filters(self):
+        path = (
+            "/api/v1/reports?reportDate=2026-07-22&templateKey=daily"
+            "&status=received&limit=20"
+        )
+        FakeHandler.responses[path] = (200, {"reports": [{"id": "report-1"}]})
+
+        result = self.client.list_reports(
+            report_date="2026-07-22",
+            template_key="daily",
+            status="received",
+            limit=20,
+        )
+
+        self.assertEqual(result["reports"][0]["id"], "report-1")
+        method, requested_path, headers, body = FakeHandler.requests[0]
+        self.assertEqual(method, "GET")
+        self.assertEqual(requested_path, path)
+        self.assertEqual(headers["Authorization"], "Bearer producer-secret")
+        self.assertEqual(body, b"")
+
     def test_producer_only_config_can_push(self):
         config_file = Path(self.tempdir.name) / "config.json"
         config_file.write_text(

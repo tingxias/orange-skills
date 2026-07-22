@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
 from urllib.request import ProxyHandler, Request, build_opener
 
 
@@ -191,6 +192,29 @@ class ReportClient:
             "GET", f"/api/v1/reports/{report_id}", self._producer_token()
         ).data
 
+    def list_reports(
+        self,
+        report_date: str | None = None,
+        template_key: str | None = None,
+        status: str | None = None,
+        limit: int = 20,
+    ) -> Any:
+        if not 1 <= limit <= 100:
+            raise ConfigError("limit 必须在 1 到 100 之间")
+        parameters: dict[str, str | int] = {}
+        if report_date:
+            parameters["reportDate"] = report_date
+        if template_key:
+            parameters["templateKey"] = template_key
+        if status:
+            parameters["status"] = status
+        parameters["limit"] = limit
+        return self._request(
+            "GET",
+            f"/api/v1/reports?{urlencode(parameters)}",
+            self._producer_token(),
+        ).data
+
     def append(self, report_id: str, patch: dict[str, Any]) -> Any:
         return self._update(report_id, patch, "append")
 
@@ -320,6 +344,14 @@ def build_parser() -> argparse.ArgumentParser:
     fetch.add_argument("--state-file")
     get = commands.add_parser("get", help="查询日报")
     get.add_argument("report_id")
+    report_list = commands.add_parser("list", help="查询本人日报列表")
+    report_list.add_argument("--report-date")
+    report_list.add_argument("--template-key")
+    report_list.add_argument(
+        "--status",
+        choices=["received", "processing", "retry_wait", "submitted", "dead_letter"],
+    )
+    report_list.add_argument("--limit", type=int, default=20)
     append = commands.add_parser("append", help="追加日报内容")
     append.add_argument("report_id")
     append.add_argument("--payload-file")
@@ -354,6 +386,13 @@ def main(argv: list[str] | None = None) -> int:
             result = client.fetch()
         elif args.command == "get":
             result = client.get(args.report_id)
+        elif args.command == "list":
+            result = client.list_reports(
+                args.report_date,
+                args.template_key,
+                args.status,
+                args.limit,
+            )
         elif args.command == "append":
             result = client.append(args.report_id, _read_payload(args.payload_file))
         elif args.command == "modify":

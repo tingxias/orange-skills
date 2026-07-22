@@ -74,6 +74,20 @@ HTTP `201` 表示新建成功，`200` 表示相同内容的幂等重放。遇到
 
 使用 `get <日报 ID>` 从发送端查询状态；它不会领取日报，也不会创建获取端租约。
 
+## 查询本人日报
+
+确认用户已提供 Producer Key 后，使用 `list` 查询该 Key 所属用户的日报。用户身份只由服务端认证结果确定，不能传入或拼接 `userId`；即使发送端与获取端分开，查询也只需要 Producer Key。
+
+```bash
+python3 "$CLIENT" list \
+  --report-date 2026-07-22 \
+  --template-key daily \
+  --status received \
+  --limit 20
+```
+
+`--report-date`、`--template-key` 和 `--status` 均可省略；`--limit` 默认 20，范围为 1 到 100。结果按日报日期、创建时间和 ID 倒序返回在 `reports` 数组中，空数组表示本人没有符合条件的日报。查询是只读操作，不会领取日报或改变状态。使用 Consumer Key 会返回 `403 ROLE_FORBIDDEN`。
+
 ## 追加或修改日报
 
 操作前先使用 `get <日报 ID>` 确认当前内容和状态。追加与修改都更新原日报 ID，不要生成新的幂等键或重新调用 `push`。
