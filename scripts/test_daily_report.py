@@ -16,6 +16,12 @@ class FakeHandler(BaseHTTPRequestHandler):
     responses = {}
 
     def do_POST(self):
+        self._handle_json_request()
+
+    def do_PATCH(self):
+        self._handle_json_request()
+
+    def _handle_json_request(self):
         length = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(length)
         self.__class__.requests.append((self.command, self.path, dict(self.headers), body))
@@ -68,6 +74,37 @@ class ReportClientTests(unittest.TestCase):
         self.assertEqual(headers["Authorization"], "Bearer producer-secret")
         self.assertEqual(headers["Idempotency-Key"], "daily-2026-07-22")
         self.assertEqual(json.loads(body), payload)
+
+    def test_append_uses_producer_patch_without_creating_new_report(self):
+        FakeHandler.responses["/api/v1/reports/report-1"] = (
+            200,
+            {"id": "report-1", "status": "received"},
+        )
+
+        result = self.client.append("report-1", {"completed": ["追加事项"]})
+
+        self.assertEqual(result["id"], "report-1")
+        method, path, headers, body = FakeHandler.requests[0]
+        self.assertEqual(method, "PATCH")
+        self.assertEqual(path, "/api/v1/reports/report-1")
+        self.assertEqual(headers["Authorization"], "Bearer producer-secret")
+        self.assertEqual(
+            json.loads(body),
+            {"mode": "append", "completed": ["追加事项"]},
+        )
+
+    def test_modify_uses_replace_mode(self):
+        FakeHandler.responses["/api/v1/reports/report-1"] = (
+            200,
+            {"id": "report-1", "status": "received"},
+        )
+
+        self.client.modify("report-1", {"inProgress": ["修改事项"]})
+
+        self.assertEqual(
+            json.loads(FakeHandler.requests[0][3]),
+            {"mode": "replace", "inProgress": ["修改事项"]},
+        )
 
     def test_producer_only_config_can_push(self):
         config_file = Path(self.tempdir.name) / "config.json"

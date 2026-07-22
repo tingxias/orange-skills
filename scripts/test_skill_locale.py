@@ -23,6 +23,9 @@ class SkillLocaleTests(unittest.TestCase):
         self.assertNotIn("Codex", skill)
         self.assertNotIn("YonClaw", skill)
         self.assertIn("填写公司系统", skill)
+        self.assertIn("追加", skill)
+        self.assertIn("修改", skill)
+        self.assertIn("已提交", skill)
         self.assertNotIn("## Configuration", skill)
         self.assertNotIn("## Push", skill)
         self.assertIn("发送和获取结构化日报", metadata)
@@ -41,6 +44,8 @@ class SkillLocaleTests(unittest.TestCase):
 
         self.assertIn("日报发送与获取客户端", result.stdout)
         self.assertIn("提交日报", result.stdout)
+        self.assertIn("追加日报内容", result.stdout)
+        self.assertIn("修改日报内容", result.stdout)
         self.assertNotIn("submit a report", result.stdout)
         self.assertNotIn("usage:", result.stdout)
         self.assertNotIn("positional arguments:", result.stdout)

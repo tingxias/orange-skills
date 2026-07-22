@@ -191,6 +191,27 @@ class ReportClient:
             "GET", f"/api/v1/reports/{report_id}", self._producer_token()
         ).data
 
+    def append(self, report_id: str, patch: dict[str, Any]) -> Any:
+        return self._update(report_id, patch, "append")
+
+    def modify(self, report_id: str, patch: dict[str, Any]) -> Any:
+        return self._update(report_id, patch, "replace")
+
+    def _update(self, report_id: str, patch: dict[str, Any], mode: str) -> Any:
+        if not report_id.strip():
+            raise ConfigError("必须提供日报 ID")
+        if not patch:
+            raise ConfigError("追加或修改内容不能为空")
+        if "mode" in patch:
+            raise ConfigError("请求正文不能包含 mode，请使用 append 或 modify 命令")
+        body = {"mode": mode, **patch}
+        return self._request(
+            "PATCH",
+            f"/api/v1/reports/{report_id}",
+            self._producer_token(),
+            body,
+        ).data
+
     def complete(self, report_id: str | None = None, lease_token: str | None = None) -> Any:
         consumer_key = self._consumer_token()
         report_id, lease_token = self._claim_values(report_id, lease_token)
@@ -299,6 +320,12 @@ def build_parser() -> argparse.ArgumentParser:
     fetch.add_argument("--state-file")
     get = commands.add_parser("get", help="查询日报")
     get.add_argument("report_id")
+    append = commands.add_parser("append", help="追加日报内容")
+    append.add_argument("report_id")
+    append.add_argument("--payload-file")
+    modify = commands.add_parser("modify", help="修改日报内容")
+    modify.add_argument("report_id")
+    modify.add_argument("--payload-file")
     complete = commands.add_parser("complete", help="回传下游成功结果")
     complete.add_argument("--report-id")
     complete.add_argument("--lease-token")
@@ -327,6 +354,10 @@ def main(argv: list[str] | None = None) -> int:
             result = client.fetch()
         elif args.command == "get":
             result = client.get(args.report_id)
+        elif args.command == "append":
+            result = client.append(args.report_id, _read_payload(args.payload_file))
+        elif args.command == "modify":
+            result = client.modify(args.report_id, _read_payload(args.payload_file))
         elif args.command == "complete":
             result = client.complete(args.report_id, args.lease_token)
         else:

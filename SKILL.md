@@ -1,6 +1,6 @@
 ---
 name: daily-report
-description: 当用户需要通过 daily_report 服务发送或获取结构化日报、查询日报状态，或回传下游处理结果时使用。
+description: 当用户需要通过 daily_report 服务发送、追加、修改或获取结构化日报，查询日报状态，或回传下游处理结果时使用。
 ---
 
 # 日报发送与获取
@@ -11,12 +11,12 @@ description: 当用户需要通过 daily_report 服务发送或获取结构化�
 
 首次使用时，必须由用户明确输入本次角色对应的完整 Key（即 Bearer 密钥）。后续使用已保存凭据或更换运行环境时，也必须由用户明确授权读取对应配置。不能因为本地配置文件存在、上次会话使用过，或服务地址有默认值，就默默读取凭据并继续调用接口。
 
-- 发送或查询日报：需要用户明确提供发送端的 `Producer Key`。
+- 发送、查询、追加或修改日报：需要用户明确提供发送端的 `Producer Key`。
 - 获取、完成或失败回执：需要用户明确提供获取端的 `Consumer Key`。
 - 同一软件同时承担两种角色：必须分别确认两把 Key；发送者和获取者分开时，各自只配置本角色的 Key。
 - 服务使用完整的 `drp_...`（Producer）或 `drc_...`（Consumer）字符串作为 Bearer 密钥，没有可拆开的用户名和密码字段。完整字符串必须按密钥处理，不要写入日志、日报正文或 Git。
 
-未确认前，不执行 `push`、`get`、`fetch`、`complete` 或 `fail`。如果用户只是在询问配置方式，可以只说明所需字段，不发起网络请求。
+未确认前，不执行 `push`、`get`、`append`、`modify`、`fetch`、`complete` 或 `fail`。如果用户只是在询问配置方式，可以只说明所需字段，不发起网络请求。
 
 ## 配置
 
@@ -74,6 +74,30 @@ HTTP `201` 表示新建成功，`200` 表示相同内容的幂等重放。遇到
 
 使用 `get <日报 ID>` 从发送端查询状态；它不会领取日报，也不会创建获取端租约。
 
+## 追加或修改日报
+
+操作前先使用 `get <日报 ID>` 确认当前内容和状态。追加与修改都更新原日报 ID，不要生成新的幂等键或重新调用 `push`。
+
+追加内容时，仅发送需要新增的数组项；服务保留原内容并自动去重：
+
+```bash
+echo '{
+  "completed": ["补充完成事项"],
+  "evidence": [{"kind": "commit", "value": "abc123"}]
+}' | python3 "$CLIENT" append '<日报 ID>'
+```
+
+修改内容时，仅发送需要替换的字段，未提供的字段保持不变：
+
+```bash
+echo '{
+  "inProgress": ["调整后的进行中事项"],
+  "risks": []
+}' | python3 "$CLIENT" modify '<日报 ID>'
+```
+
+追加模式会合并 `completed`、`inProgress`、`risks`、`nextSteps` 和 `evidence`。修改模式会整体替换请求中出现的字段。`received`、`retry_wait`、`dead_letter` 可以更新；`processing` 已被获取端领取，`submitted` 已提交，两种状态都禁止更新。修改 `dead_letter` 后，需要单独执行重入操作才能再次投递。
+
 ## 获取与回执
 
 确认用户已提供 Consumer Key 后，只执行一次 `fetch`：
@@ -111,6 +135,7 @@ python3 "$CLIENT" fail \
 
 - `AUTHENTICATION_REQUIRED` 或 `ROLE_FORBIDDEN`：确认用户已明确提供正确角色的 Key，不要替换成管理员 Token，也不要用 Producer Key 调获取接口或反过来使用。
 - `REPORT_CONFLICT`：保留原始请求正文和幂等键，再调查冲突原因。
+- 追加或修改返回 `INVALID_REPORT_STATE`：日报正在处理或已经提交，不要绕过状态限制创建重复日报。
 - 获取接口返回 `204`：正常结束，不发送任何回执。
 - `INVALID_LEASE` 或 `INVALID_REPORT_STATE`：停止当前任务并调查状态，不要继续领取新任务。
 - 传输错误：使用完全相同的正文和幂等键重试，不要重新生成时间戳。
