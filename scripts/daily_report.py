@@ -97,7 +97,7 @@ class ReportClient:
     def __init__(
         self,
         base_url: str,
-        producer_key: str,
+        producer_key: str = "",
         consumer_key: str = "",
         state_file: Path = DEFAULT_STATE,
         timeout: float = 20.0,
@@ -113,12 +113,12 @@ class ReportClient:
 
     def _producer_token(self) -> str:
         if not self.producer_key:
-            raise ConfigError("Codex 推送或查询需要配置 producer_key")
+            raise ConfigError("发送或查询需要配置 producer_key")
         return self.producer_key
 
     def _consumer_token(self) -> str:
         if not self.consumer_key:
-            raise ConfigError("YonClaw 获取或回执需要配置 consumer_key")
+            raise ConfigError("获取或回执需要配置 consumer_key")
         return self.consumer_key
 
     def _request(
@@ -289,20 +289,20 @@ class ChineseArgumentParser(argparse.ArgumentParser):
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = ChineseArgumentParser(prog="daily-report", description="Codex 日报推送客户端")
+    parser = ChineseArgumentParser(prog="daily-report", description="日报发送与获取客户端")
     commands = parser.add_subparsers(title="命令", dest="command", required=True)
     commands.add_parser("health", help="检查服务健康状态")
     push = commands.add_parser("push", help="提交日报 JSON 对象")
     push.add_argument("--idempotency-key", required=True)
     push.add_argument("--payload-file")
-    fetch = commands.add_parser("fetch", help="YonClaw 契约：领取一条待处理日报")
+    fetch = commands.add_parser("fetch", help="领取一条待处理日报")
     fetch.add_argument("--state-file")
     get = commands.add_parser("get", help="查询日报")
     get.add_argument("report_id")
-    complete = commands.add_parser("complete", help="YonClaw 契约：回传下游成功结果")
+    complete = commands.add_parser("complete", help="回传下游成功结果")
     complete.add_argument("--report-id")
     complete.add_argument("--lease-token")
-    fail = commands.add_parser("fail", help="YonClaw 契约：回传下游失败结果")
+    fail = commands.add_parser("fail", help="回传下游失败结果")
     fail.add_argument("--error-code", required=True)
     fail.add_argument("--error-message", required=True)
     retry = fail.add_mutually_exclusive_group(required=True)

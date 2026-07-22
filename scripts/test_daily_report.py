@@ -103,10 +103,37 @@ class ReportClientTests(unittest.TestCase):
             state_file=self.state_file,
         )
 
-        with self.assertRaisesRegex(ConfigError, "YonClaw.*consumer_key"):
+        with self.assertRaisesRegex(ConfigError, "获取或回执.*consumer_key"):
             client.fetch()
 
         self.assertEqual(FakeHandler.requests, [])
+
+    def test_consumer_only_config_can_fetch(self):
+        config_file = Path(self.tempdir.name) / "consumer-config.json"
+        config_file.write_text(
+            json.dumps(
+                {
+                    "base_url": f"http://127.0.0.1:{self.server.server_port}",
+                    "consumer_key": "consumer-only-secret",
+                }
+            ),
+            encoding="utf-8",
+        )
+        FakeHandler.responses["/api/v1/reports/claim"] = (204, None)
+
+        with patch.dict(
+            os.environ,
+            {"DAILY_REPORT_CONFIG": str(config_file)},
+            clear=True,
+        ):
+            client = load_client()
+            result = client.fetch()
+
+        self.assertEqual(result, {"claimed": False})
+        self.assertEqual(
+            FakeHandler.requests[0][2]["Authorization"],
+            "Bearer consumer-only-secret",
+        )
 
     def test_fetch_204_is_a_normal_empty_result(self):
         FakeHandler.responses["/api/v1/reports/claim"] = (204, None)
