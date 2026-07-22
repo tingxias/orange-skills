@@ -1,39 +1,39 @@
 ---
 name: daily-report
-description: Use when the user needs to submit a structured daily report, claim a pending report, inspect report status, or acknowledge downstream success or failure through the daily_report service.
+description: 当用户需要通过 daily_report 服务提交结构化日报、领取待处理日报、查询日报状态，或回传下游处理成功与失败结果时使用。
 ---
 
-# Daily Report
+# 日报推送与获取
 
-Use the bundled standard-library client to push reports as a Producer and claim or acknowledge reports as a Consumer. Keep credentials outside the skill directory and preserve the one-time claim lease until the downstream system has explicitly succeeded or failed.
+使用技能内置的纯标准库客户端，以生产者（Producer）身份推送日报，以消费者（Consumer）身份领取并回执日报。将凭据保存在 Skill 目录之外，并持续保留一次性领取租约，直到下游系统明确处理成功或失败。
 
-## Configuration
+## 配置
 
-Read credentials from `~/.config/daily-report/config.json` or these environment overrides:
+从 `~/.config/daily-report/config.json` 读取凭据，配置格式如下：
 
 ```json
 {
   "base_url": "https://report.lehuicheng.top",
-  "producer_key": "<Producer Key>",
-  "consumer_key": "<Consumer Key>",
+  "producer_key": "<生产者 Key>",
+  "consumer_key": "<消费者 Key>",
   "state_file": "~/.config/daily-report/claim.json"
 }
 ```
 
-Use `0600` permissions for this file and never put an admin token in it. Environment variables take precedence: `DAILY_REPORT_BASE_URL`, `DAILY_REPORT_PRODUCER_KEY`, `DAILY_REPORT_CONSUMER_KEY`, and `DAILY_REPORT_STATE_FILE`.
+将配置文件权限设置为 `0600`，不要在其中保存管理员 Token。以下环境变量优先于配置文件：`DAILY_REPORT_BASE_URL`、`DAILY_REPORT_PRODUCER_KEY`、`DAILY_REPORT_CONSUMER_KEY`、`DAILY_REPORT_STATE_FILE`。
 
-Run the client as:
+按以下方式调用客户端：
 
 ```bash
 CLIENT="${CODEX_HOME:-$HOME/.codex}/skills/daily-report/scripts/daily_report.py"
-python3 "$CLIENT" <command>
+python3 "$CLIENT" <命令>
 ```
 
-The client bypasses ambient HTTP proxies because the service is an internal address.
+客户端会绕过系统 HTTP 代理，直接访问日报服务。
 
-## Push
+## 推送日报
 
-Before pushing, check `health` and build one fixed JSON payload. Keep the same `generatedAt` and body when retrying; change neither after choosing the idempotency key.
+推送前先执行 `health` 检查服务状态，再生成一份固定的 JSON 请求。确定幂等键后，重试时必须复用完全相同的请求正文和 `generatedAt`，不要重新生成时间。
 
 ```bash
 echo '{
@@ -51,43 +51,43 @@ echo '{
   --idempotency-key 'wish-2026-07-22-daily'
 ```
 
-Treat HTTP `201` as a new report and `200` as an identical replay. Do not blindly retry `409 REPORT_CONFLICT`; compare the original body and idempotency key. The payload must contain at least one item in `completed` or `inProgress`, and `timezone` must be an IANA name.
+HTTP `201` 表示新建成功，`200` 表示相同内容的幂等重放。遇到 `409 REPORT_CONFLICT` 时不要盲目重试，应对比原请求正文和幂等键。`completed` 或 `inProgress` 至少包含一项，`timezone` 必须使用 IANA 时区名称。
 
-## Fetch And Acknowledge
+## 获取并回执
 
-Run `fetch` once:
+只执行一次 `fetch`：
 
 ```bash
 python3 "$CLIENT" fetch
 ```
 
-HTTP `204` is a normal “no pending report” result. HTTP `200` returns the report, `submissionKey`, and one-time `leaseToken`; the client stores the lease in `claim.json` with mode `0600`. Do not call `fetch` again while that state exists, and do not complete a report before the downstream company system confirms success.
+HTTP `204` 表示当前没有待处理日报，属于正常结果。HTTP `200` 会返回日报、`submissionKey` 和一次性 `leaseToken`；客户端同时将租约保存到权限为 `0600` 的 `claim.json`。本地存在租约状态时不要再次执行 `fetch`，下游公司系统未明确确认成功前也不要执行 `complete`。
 
-After downstream success:
+下游处理成功后执行：
 
 ```bash
 python3 "$CLIENT" complete
 ```
 
-After downstream failure, choose retryability explicitly:
+下游处理失败时，明确指定是否允许重试：
 
 ```bash
 python3 "$CLIENT" fail \
   --error-code DOWNSTREAM_UNAVAILABLE \
-  --error-message 'company system temporarily unavailable' \
+  --error-message '公司系统暂时不可用' \
   --retryable
 ```
 
-Use `--no-retryable` for deterministic data or business errors. A successful `complete` or `fail` removes the local lease state. Never log Producer/Consumer Keys or `leaseToken`; pass the lease only to the downstream call and this client.
+确定性数据错误或业务错误使用 `--no-retryable`。`complete` 或 `fail` 成功后，客户端会删除本地租约状态。不要记录生产者 Key、消费者 Key 或 `leaseToken`，租约只传递给下游调用和本客户端。
 
-Use `get <report-id>` for a Producer-side status check. `INVALID_LEASE` means the saved lease cannot be reused; stop and inspect the report rather than repeatedly retrying it.
+使用 `get <日报 ID>` 从生产者侧查询状态。`INVALID_LEASE` 表示已保存的租约不能继续使用，应停止当前流程并检查日报状态，不要反复重试。
 
-## Error Handling
+## 错误处理
 
-- `AUTHENTICATION_REQUIRED` or `ROLE_FORBIDDEN`: verify the correct same-user Producer/Consumer Key; never substitute the admin token.
-- `REPORT_CONFLICT`: preserve the original payload and idempotency key, then investigate.
-- `204` from `fetch`: finish normally without a callback.
-- `INVALID_LEASE` or `INVALID_REPORT_STATE`: stop the current workflow; do not issue another claim.
-- Transport errors: retry the exact same push body and idempotency key, not a regenerated timestamp.
+- `AUTHENTICATION_REQUIRED` 或 `ROLE_FORBIDDEN`：确认使用同一用户下正确角色的生产者/消费者 Key，不要替换成管理员 Token。
+- `REPORT_CONFLICT`：保留原始请求正文和幂等键，再调查冲突原因。
+- `fetch` 返回 `204`：正常结束，不发送任何回执。
+- `INVALID_LEASE` 或 `INVALID_REPORT_STATE`：停止当前流程，不要继续领取新任务。
+- 传输错误：使用完全相同的正文和幂等键重试，不要重新生成时间戳。
 
-The implementation and tests live in `scripts/daily_report.py` and `scripts/test_daily_report.py`.
+实现与测试分别位于 `scripts/daily_report.py`、`scripts/test_daily_report.py` 和 `scripts/test_skill_locale.py`。

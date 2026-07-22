@@ -1,4 +1,4 @@
 interface:
-  display_name: "Daily Report"
-  short_description: "Push and process daily reports"
-  default_prompt: "Use $daily-report to push today's report or fetch and process a pending report."
+  display_name: "日报推送与获取"
+  short_description: "提交和处理日报，支持领取、成功与失败回执"
+  default_prompt: "使用 $daily-report 推送今天的日报，或获取并处理一条待办日报。"

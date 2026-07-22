@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small standard-library client for the daily_report HTTP API."""
+"""日报服务 HTTP API 的纯标准库客户端。"""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ def _parse_json(raw: bytes) -> Any:
     try:
         return json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise TransportError("server returned invalid JSON") from exc
+        raise TransportError("服务端返回了无效 JSON") from exc
 
 
 def _secure_state_path(path: Path) -> None:
@@ -85,11 +85,11 @@ def _read_state(path: Path) -> dict[str, Any]:
         with path.open(encoding="utf-8") as handle:
             value = json.load(handle)
     except FileNotFoundError as exc:
-        raise ConfigError(f"no active claim; run fetch first ({path})") from exc
+        raise ConfigError(f"没有活动中的租约，请先执行 fetch（{path}）") from exc
     except (OSError, json.JSONDecodeError) as exc:
-        raise ConfigError(f"cannot read claim state {path}") from exc
+        raise ConfigError(f"无法读取租约状态 {path}") from exc
     if not isinstance(value, dict) or not value.get("reportId") or not value.get("leaseToken"):
-        raise ConfigError(f"claim state is incomplete: {path}")
+        raise ConfigError(f"租约状态不完整：{path}")
     return value
 
 
@@ -103,9 +103,9 @@ class ReportClient:
         timeout: float = 20.0,
     ):
         if not base_url.startswith(("http://", "https://")):
-            raise ConfigError("base_url must start with http:// or https://")
+            raise ConfigError("base_url 必须以 http:// 或 https:// 开头")
         if not producer_key or not consumer_key:
-            raise ConfigError("producer_key and consumer_key are required")
+            raise ConfigError("必须配置 producer_key 和 consumer_key")
         self.base_url = base_url.rstrip("/")
         self.producer_key = producer_key
         self.consumer_key = consumer_key
@@ -135,14 +135,14 @@ class ReportClient:
         except HTTPError as exc:
             raise ApiError(exc.code, _parse_json(exc.read())) from exc
         except (URLError, TimeoutError, OSError) as exc:
-            raise TransportError(f"request failed: {exc}") from exc
+            raise TransportError(f"请求失败：{exc}") from exc
 
     def health(self) -> Any:
         return self._request("GET", "/health/ready", "health-check").data
 
     def push(self, payload: dict[str, Any], idempotency_key: str) -> Any:
         if not idempotency_key.strip():
-            raise ConfigError("idempotency_key is required")
+            raise ConfigError("必须提供 idempotency_key")
         return self._request(
             "POST",
             "/api/v1/reports",
@@ -154,18 +154,18 @@ class ReportClient:
     def fetch(self) -> Any:
         if self.state_file.exists():
             raise ConfigError(
-                f"an active claim already exists at {self.state_file}; complete or fail it first"
+                f"已有活动租约：{self.state_file}；请先执行 complete 或 fail"
             )
         response = self._request("POST", "/api/v1/reports/claim", self.consumer_key)
         if response.status == 204:
             return {"claimed": False}
         data = response.data
         if not isinstance(data, dict) or not data.get("leaseToken"):
-            raise TransportError("claim response did not contain leaseToken")
+            raise TransportError("领取响应缺少 leaseToken")
         report = data.get("report") or {}
         report_id = report.get("id") or data.get("reportId")
         if not report_id:
-            raise TransportError("claim response did not contain report.id")
+            raise TransportError("领取响应缺少 report.id")
         _write_state(
             self.state_file,
             {
@@ -237,10 +237,10 @@ def load_client() -> ReportClient:
             with config_path.open(encoding="utf-8") as handle:
                 loaded = json.load(handle)
             if not isinstance(loaded, dict):
-                raise ConfigError(f"config must be a JSON object: {config_path}")
+                raise ConfigError(f"配置必须是 JSON 对象：{config_path}")
             config = loaded
         except json.JSONDecodeError as exc:
-            raise ConfigError(f"invalid JSON config: {config_path}") from exc
+            raise ConfigError(f"配置不是有效 JSON：{config_path}") from exc
     base_url = os.environ.get("DAILY_REPORT_BASE_URL", config.get("base_url", DEFAULT_BASE_URL))
     producer_key = os.environ.get("DAILY_REPORT_PRODUCER_KEY", config.get("producer_key", ""))
     consumer_key = os.environ.get("DAILY_REPORT_CONSUMER_KEY", config.get("consumer_key", ""))
@@ -254,7 +254,7 @@ def _read_payload(path: str | None) -> dict[str, Any]:
     raw = Path(path).read_text(encoding="utf-8") if path else sys.stdin.read()
     value = json.loads(raw)
     if not isinstance(value, dict):
-        raise ConfigError("report payload must be a JSON object")
+        raise ConfigError("日报请求正文必须是 JSON 对象")
     return value
 
 
@@ -262,21 +262,34 @@ def _print_json(value: Any) -> None:
     print(json.dumps(value, ensure_ascii=False, indent=2))
 
 
+class ChineseArgumentParser(argparse.ArgumentParser):
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self._positionals.title = "位置参数"
+        self._optionals.title = "可选参数"
+        for action in self._actions:
+            if action.dest == "help":
+                action.help = "显示帮助信息并退出"
+
+    def format_help(self) -> str:
+        return super().format_help().replace("usage: ", "用法：", 1)
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="daily-report")
-    commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("health")
-    push = commands.add_parser("push", help="submit a report JSON object")
+    parser = ChineseArgumentParser(prog="daily-report", description="日报推送与获取客户端")
+    commands = parser.add_subparsers(title="命令", dest="command", required=True)
+    commands.add_parser("health", help="检查服务健康状态")
+    push = commands.add_parser("push", help="提交日报 JSON 对象")
     push.add_argument("--idempotency-key", required=True)
     push.add_argument("--payload-file")
-    fetch = commands.add_parser("fetch", help="claim one pending report")
+    fetch = commands.add_parser("fetch", help="领取一条待处理日报")
     fetch.add_argument("--state-file")
-    get = commands.add_parser("get", help="read a report")
+    get = commands.add_parser("get", help="查询日报")
     get.add_argument("report_id")
-    complete = commands.add_parser("complete", help="acknowledge a successful downstream submission")
+    complete = commands.add_parser("complete", help="回传下游成功结果")
     complete.add_argument("--report-id")
     complete.add_argument("--lease-token")
-    fail = commands.add_parser("fail", help="report downstream failure")
+    fail = commands.add_parser("fail", help="回传下游失败结果")
     fail.add_argument("--error-code", required=True)
     fail.add_argument("--error-message", required=True)
     retry = fail.add_mutually_exclusive_group(required=True)
