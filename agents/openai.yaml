@@ -1,0 +1,4 @@
+interface:
+  display_name: "Daily Report"
+  short_description: "Push and process daily reports"
+  default_prompt: "Use $daily-report to push today's report or fetch and process a pending report."
