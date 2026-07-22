@@ -6,8 +6,9 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import patch
 
-from daily_report import ApiError, ConfigError, DEFAULT_BASE_URL, ReportClient
+from daily_report import ApiError, ConfigError, DEFAULT_BASE_URL, ReportClient, load_client
 
 
 class FakeHandler(BaseHTTPRequestHandler):
@@ -67,6 +68,45 @@ class ReportClientTests(unittest.TestCase):
         self.assertEqual(headers["Authorization"], "Bearer producer-secret")
         self.assertEqual(headers["Idempotency-Key"], "daily-2026-07-22")
         self.assertEqual(json.loads(body), payload)
+
+    def test_producer_only_config_can_push(self):
+        config_file = Path(self.tempdir.name) / "config.json"
+        config_file.write_text(
+            json.dumps(
+                {
+                    "base_url": f"http://127.0.0.1:{self.server.server_port}",
+                    "producer_key": "producer-only-secret",
+                }
+            ),
+            encoding="utf-8",
+        )
+        FakeHandler.responses["/api/v1/reports"] = (201, {"report": {"id": "report-2"}})
+
+        with patch.dict(
+            os.environ,
+            {"DAILY_REPORT_CONFIG": str(config_file)},
+            clear=True,
+        ):
+            client = load_client()
+            result = client.push({"completed": ["done"]}, "producer-only")
+
+        self.assertEqual(result["report"]["id"], "report-2")
+        self.assertEqual(
+            FakeHandler.requests[0][2]["Authorization"],
+            "Bearer producer-only-secret",
+        )
+
+    def test_fetch_requires_consumer_key(self):
+        client = ReportClient(
+            f"http://127.0.0.1:{self.server.server_port}",
+            producer_key="producer-secret",
+            state_file=self.state_file,
+        )
+
+        with self.assertRaisesRegex(ConfigError, "YonClaw.*consumer_key"):
+            client.fetch()
+
+        self.assertEqual(FakeHandler.requests, [])
 
     def test_fetch_204_is_a_normal_empty_result(self):
         FakeHandler.responses["/api/v1/reports/claim"] = (204, None)

@@ -12,11 +12,15 @@ class SkillLocaleTests(unittest.TestCase):
         skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
         metadata = (SKILL_DIR / "agents" / "openai.yaml").read_text(encoding="utf-8")
 
-        self.assertIn("日报推送与获取", skill)
+        self.assertIn("Codex 日报推送", skill)
         self.assertIn("## 配置", skill)
+        self.assertIn("Codex 只负责", skill)
+        self.assertIn("YonClaw", skill)
+        self.assertIn("填写公司系统", skill)
+        self.assertNotIn('python3 "$CLIENT" fetch', skill)
         self.assertNotIn("## Configuration", skill)
         self.assertNotIn("## Push", skill)
-        self.assertIn("提交和处理日报", metadata)
+        self.assertIn("推送结构化日报", metadata)
         self.assertIn("使用 $daily-report", metadata)
 
     def test_cli_help_is_chinese(self):
@@ -27,8 +31,8 @@ class SkillLocaleTests(unittest.TestCase):
             text=True,
         )
 
+        self.assertIn("Codex 日报推送客户端", result.stdout)
         self.assertIn("提交日报", result.stdout)
-        self.assertIn("领取一条待处理日报", result.stdout)
         self.assertNotIn("submit a report", result.stdout)
         self.assertNotIn("usage:", result.stdout)
         self.assertNotIn("positional arguments:", result.stdout)

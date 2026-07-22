@@ -98,20 +98,28 @@ class ReportClient:
         self,
         base_url: str,
         producer_key: str,
-        consumer_key: str,
+        consumer_key: str = "",
         state_file: Path = DEFAULT_STATE,
         timeout: float = 20.0,
     ):
         if not base_url.startswith(("http://", "https://")):
             raise ConfigError("base_url 必须以 http:// 或 https:// 开头")
-        if not producer_key or not consumer_key:
-            raise ConfigError("必须配置 producer_key 和 consumer_key")
         self.base_url = base_url.rstrip("/")
         self.producer_key = producer_key
         self.consumer_key = consumer_key
         self.state_file = Path(state_file).expanduser()
         self.timeout = timeout
         self.opener = build_opener(ProxyHandler({}))
+
+    def _producer_token(self) -> str:
+        if not self.producer_key:
+            raise ConfigError("Codex 推送或查询需要配置 producer_key")
+        return self.producer_key
+
+    def _consumer_token(self) -> str:
+        if not self.consumer_key:
+            raise ConfigError("YonClaw 获取或回执需要配置 consumer_key")
+        return self.consumer_key
 
     def _request(
         self,
@@ -146,17 +154,18 @@ class ReportClient:
         return self._request(
             "POST",
             "/api/v1/reports",
-            self.producer_key,
+            self._producer_token(),
             payload,
             {"Idempotency-Key": idempotency_key},
         ).data
 
     def fetch(self) -> Any:
+        consumer_key = self._consumer_token()
         if self.state_file.exists():
             raise ConfigError(
                 f"已有活动租约：{self.state_file}；请先执行 complete 或 fail"
             )
-        response = self._request("POST", "/api/v1/reports/claim", self.consumer_key)
+        response = self._request("POST", "/api/v1/reports/claim", consumer_key)
         if response.status == 204:
             return {"claimed": False}
         data = response.data
@@ -178,14 +187,17 @@ class ReportClient:
         return data
 
     def get(self, report_id: str) -> Any:
-        return self._request("GET", f"/api/v1/reports/{report_id}", self.producer_key).data
+        return self._request(
+            "GET", f"/api/v1/reports/{report_id}", self._producer_token()
+        ).data
 
     def complete(self, report_id: str | None = None, lease_token: str | None = None) -> Any:
+        consumer_key = self._consumer_token()
         report_id, lease_token = self._claim_values(report_id, lease_token)
         result = self._request(
             "POST",
             f"/api/v1/reports/{report_id}/complete",
-            self.consumer_key,
+            consumer_key,
             {"leaseToken": lease_token},
         ).data
         self._clear_matching_state(report_id)
@@ -199,11 +211,12 @@ class ReportClient:
         report_id: str | None = None,
         lease_token: str | None = None,
     ) -> Any:
+        consumer_key = self._consumer_token()
         report_id, lease_token = self._claim_values(report_id, lease_token)
         result = self._request(
             "POST",
             f"/api/v1/reports/{report_id}/fail",
-            self.consumer_key,
+            consumer_key,
             {
                 "leaseToken": lease_token,
                 "errorCode": error_code,
@@ -276,20 +289,20 @@ class ChineseArgumentParser(argparse.ArgumentParser):
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = ChineseArgumentParser(prog="daily-report", description="日报推送与获取客户端")
+    parser = ChineseArgumentParser(prog="daily-report", description="Codex 日报推送客户端")
     commands = parser.add_subparsers(title="命令", dest="command", required=True)
     commands.add_parser("health", help="检查服务健康状态")
     push = commands.add_parser("push", help="提交日报 JSON 对象")
     push.add_argument("--idempotency-key", required=True)
     push.add_argument("--payload-file")
-    fetch = commands.add_parser("fetch", help="领取一条待处理日报")
+    fetch = commands.add_parser("fetch", help="YonClaw 契约：领取一条待处理日报")
     fetch.add_argument("--state-file")
     get = commands.add_parser("get", help="查询日报")
     get.add_argument("report_id")
-    complete = commands.add_parser("complete", help="回传下游成功结果")
+    complete = commands.add_parser("complete", help="YonClaw 契约：回传下游成功结果")
     complete.add_argument("--report-id")
     complete.add_argument("--lease-token")
-    fail = commands.add_parser("fail", help="回传下游失败结果")
+    fail = commands.add_parser("fail", help="YonClaw 契约：回传下游失败结果")
     fail.add_argument("--error-code", required=True)
     fail.add_argument("--error-message", required=True)
     retry = fail.add_mutually_exclusive_group(required=True)
