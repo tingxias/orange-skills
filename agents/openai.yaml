@@ -1,4 +1,4 @@
 interface:
   display_name: "日报发送与获取"
-  short_description: "发送、查询和获取结构化日报"
-  default_prompt: "使用 $daily-report 发送、查询、追加、修改或获取结构化日报；首次使用请先提供当前角色的完整 Key。"
+  short_description: "整理、发送、查询和获取结构化日报"
+  default_prompt: "使用 $daily-report 从当前工具的本周项目和任务生成简明工作总结，或发送、查询、追加、修改和获取结构化日报；首次使用请先提供当前角色的完整 Key。"
