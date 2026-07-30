@@ -75,7 +75,7 @@ python3 "$CLIENT" <命令>
 
 ## 发送日报
 
-使用已配置的 Producer Key 后，先执行 `health` 检查服务状态，再生成固定的 JSON 请求。Key 缺失、失效或角色不匹配时停止并请求更新。确定幂等键后，重试时必须复用完全相同的请求正文和 `generatedAt`，不要重新生成时间。
+使用已配置的 Producer Key 后，先执行 `health` 检查服务状态，再生成固定的 JSON 请求。Key 缺失、失效或角色不匹配时停止并请求更新。日报日期必须写入 `reportDate`，并且与本次要上报的实际日期一致，不能用 `generatedAt` 代替。每条内容必须以项目名称开头，格式为“项目名称：结果或进展”。同一栏目包含多条内容时，按 `1.`、`2.` 依次编号；每个栏目独立编号。确定幂等键后，重试时必须复用完全相同的请求正文和 `generatedAt`，不要重新生成时间。
 
 ```bash
 echo '{
@@ -83,7 +83,7 @@ echo '{
   "timezone": "Asia/Shanghai",
   "templateKey": "daily",
   "scope": {"mode": "all", "projectRoots": []},
-  "completed": ["完成事项"],
+  "completed": ["1. 日报服务：完成事项", "2. 客户端：完成事项"],
   "inProgress": ["进行中事项"],
   "risks": [],
   "nextSteps": [],
