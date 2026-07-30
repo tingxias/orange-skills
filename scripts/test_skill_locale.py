@@ -37,6 +37,8 @@ class SkillLocaleTests(unittest.TestCase):
         self.assertIn("只覆盖本次，不改写已保存的范围偏好", skill)
         self.assertNotIn("默认读取当前工具可见的全部项目及其本周任务，不询问目录范围", skill)
         self.assertIn("执行这些命令时不得询问同步目录或项目范围", skill)
+        self.assertIn("用户未明确目标日期时，先询问要领取哪一天的日报", skill)
+        self.assertIn("不得默认当天、最近日期、最早日期或本地租约中的日期", skill)
         self.assertIn("按项目归并", skill)
         self.assertIn("不逐条复制任务标题", skill)
         self.assertIn("当前工具不能提供项目或任务列表时，说明缺失来源并请用户补充，不猜测工作内容。", skill)
