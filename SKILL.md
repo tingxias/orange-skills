@@ -20,12 +20,13 @@ description: 当用户需要通过 daily_report 服务生成本周工作总结�
 
 ## 配置
 
-凭据保存在运行端的 `~/.config/daily-report/config.json`，文件权限设置为 `0600`。发送端可以只配置 Producer Key：
+凭据和周报范围偏好保存在运行端的 `~/.config/daily-report/config.json`，文件权限设置为 `0600`。发送端可以配置 Producer Key 和已确认的周报范围：
 
 ```json
 {
   "base_url": "https://report.lehuicheng.top",
-  "producer_key": "<完整的 Producer Key>"
+  "producer_key": "<完整的 Producer Key>",
+  "weekly_summary_scope": {"mode": "all", "project_roots": []}
 }
 ```
 
@@ -52,7 +53,13 @@ python3 "$CLIENT" <命令>
 
 ## 整理本周工作内容
 
-当用户要求根据当前工具中的项目和任务生成日报时，使用已配置的 Producer Key。默认读取当前工具可见的全部项目及其本周任务，不询问目录范围。只有用户在当前请求中主动指定项目名称或路径时，才读取匹配项目并使用指定范围。
+当用户要求根据当前工具中的项目和任务生成日报时，使用已配置的 Producer Key。配置中没有 `weekly_summary_scope` 时，首次生成周报时，询问：“使用本周全部项目，还是指定项目？”。
+
+- 用户选择全部项目时，保存 `{"mode":"all","project_roots":[]}` 到 `weekly_summary_scope`，并读取当前工具可见的全部项目及其本周任务。
+- 用户选择指定项目时，继续询问项目名称或路径，保存 `{"mode":"whitelist","project_roots":[...]}` 到 `weekly_summary_scope`，并读取匹配项目。
+- 保存时保留配置中已有的服务地址、角色 Key 和 `state_file`，文件权限保持 `0600`。
+- 后续生成周报自动使用已保存的范围偏好，不再询问目录。
+- 用户在当前请求中主动指定项目名称或路径时，使用该范围只覆盖本次，不改写已保存的范围偏好。
 
 “本周”按运行端本地时区计算，只包含本周一 `00:00` 到当前时间。当前工具不能提供项目或任务列表时，说明缺失来源并请用户补充，不猜测工作内容。
 

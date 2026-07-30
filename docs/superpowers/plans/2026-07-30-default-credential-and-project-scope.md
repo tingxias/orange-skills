@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 已保存的角色 Key 自动使用，生成周报默认读取本周全部可见项目，非汇总命令不再询问项目目录。
+**Goal:** 已保存的角色 Key 自动使用，首次生成周报确认并保存项目范围，非汇总命令不询问项目目录。
 
-**Architecture:** 保持现有服务、客户端和配置文件契约不变，只收紧 Skill 的交互规则。用静态行为测试锁定凭据自动读取、默认全项目以及领取和回执不询问项目范围。
+**Architecture:** 保持现有服务和客户端契约不变，在现有配置文件增加可选的范围偏好。用静态行为测试锁定凭据自动读取、首次范围确认、后续范围复用以及领取和回执不询问项目范围。
 
 **Tech Stack:** Markdown Skill、Python `unittest`、Skill validator、Git
 
@@ -12,8 +12,8 @@
 
 - 首次使用或对应角色 Key 未配置时才询问完整 Key。
 - 已保存的当前角色 Key 自动读取，禁止输出 Key、租约令牌和公司系统凭据。
-- 本周工作总结默认读取当前工具可见的全部项目并使用 `scope.mode=all`。
-- 只有用户主动指定项目时使用 `scope.mode=whitelist`。
+- 配置缺少 `weekly_summary_scope` 时，首次周报询问全部项目或指定项目，并保存所选范围。
+- 后续周报使用已保存范围；用户主动指定项目时仅覆盖本次。
 - `fetch`、`complete`、`fail`、`get`、`list`、`append` 和 `modify` 不询问项目目录。
 - 不修改 Rust 服务、HTTP 契约、Python 客户端配置格式或租约状态机。
 
