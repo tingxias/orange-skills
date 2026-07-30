@@ -68,7 +68,8 @@ def _write_state(path: Path, value: dict[str, Any]) -> None:
     _secure_state_path(path)
     fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     try:
-        os.fchmod(fd, stat.S_IRUSR | stat.S_IWUSR)
+        if hasattr(os, "fchmod"):
+            os.fchmod(fd, stat.S_IRUSR | stat.S_IWUSR)
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             json.dump(value, handle, ensure_ascii=False, separators=(",", ":"))
             handle.write("\n")

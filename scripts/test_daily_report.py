@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch
 
+import daily_report
 from daily_report import ApiError, ConfigError, DEFAULT_BASE_URL, ReportClient, load_client
 
 
@@ -211,6 +212,25 @@ class ReportClientTests(unittest.TestCase):
             self.client.fetch()
 
         self.assertEqual(FakeHandler.requests, [])
+
+    def test_state_write_succeeds_when_fchmod_is_unavailable(self):
+        class OsWithoutFchmod:
+            def __getattr__(self, name):
+                if name == "fchmod":
+                    raise AttributeError(name)
+                return getattr(os, name)
+
+        state = {"reportId": "report-1", "leaseToken": "lease-secret"}
+
+        with patch.object(daily_report, "os", OsWithoutFchmod()):
+            try:
+                daily_report._write_state(self.state_file, state)
+                error = None
+            except Exception as exc:
+                error = exc
+
+        self.assertIsNone(error, f"租约写入不应依赖 os.fchmod：{error}")
+        self.assertEqual(json.loads(self.state_file.read_text(encoding="utf-8")), state)
 
     def test_fetch_persists_lease_and_complete_clears_it(self):
         FakeHandler.responses["/api/v1/reports/claim"] = (
