@@ -39,6 +39,8 @@ class SkillLocaleTests(unittest.TestCase):
         self.assertIn("执行这些命令时不得询问同步目录或项目范围", skill)
         self.assertIn("用户未明确目标日期时，先询问要领取哪一天的日报", skill)
         self.assertIn("不得默认当天、最近日期、最早日期或本地租约中的日期", skill)
+        self.assertIn("下游系统确认日报写入成功后，立即自动执行 `complete`", skill)
+        self.assertIn("不再询问用户是否回执", skill)
         self.assertIn("按项目归并", skill)
         self.assertIn("不逐条复制任务标题", skill)
         self.assertIn("当前工具不能提供项目或任务列表时，说明缺失来源并请用户补充，不猜测工作内容。", skill)

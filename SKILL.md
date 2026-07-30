@@ -145,7 +145,7 @@ python3 "$CLIENT" fetch --report-date 2026-07-30
 
 `fetch` 必须明确提供目标日期。用户未明确目标日期时，先询问要领取哪一天的日报；不得默认当天、最近日期、最早日期或本地租约中的日期。HTTP `204` 表示该日期没有待处理日报，属于正常结果；客户端不会改为领取其他日期。HTTP `200` 会返回日报、`submissionKey` 和一次性 `leaseToken`；客户端同时将租约保存到权限为 `0600` 的 `claim.json`。本地存在租约状态时不要再次执行 `fetch`，下游系统未明确确认成功前也不要执行回执。
 
-下游处理成功后执行：
+将领取的日报写入下游工作日报后，只以该系统返回的成功或已保存结果作为成功确认。下游系统确认日报写入成功后，立即自动执行 `complete`，不再询问用户是否回执：
 
 ```bash
 python3 "$CLIENT" complete
@@ -160,7 +160,7 @@ python3 "$CLIENT" fail \
   --retryable
 ```
 
-确定性数据错误或业务错误使用 `--no-retryable`。`complete` 或 `fail` 成功后，客户端会删除本地租约状态。不要记录 Producer Key、Consumer Key 或 `leaseToken`，租约只传递给下游调用和本客户端。
+写入失败、超时或结果不确定时不得执行 `complete`；按实际结果执行 `fail` 或保留租约以便调查。确定性数据错误或业务错误使用 `--no-retryable`。`complete` 或 `fail` 成功后，客户端会删除本地租约状态。不要记录 Producer Key、Consumer Key 或 `leaseToken`，租约只传递给下游调用和本客户端。
 
 发送者和获取者分开时，获取端也可以直接调用以下 HTTP 契约，不要求使用本客户端：
 
