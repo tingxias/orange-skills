@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import date
 import json
 import os
 import stat
@@ -161,13 +162,22 @@ class ReportClient:
             {"Idempotency-Key": idempotency_key},
         ).data
 
-    def fetch(self) -> Any:
+    def fetch(self, report_date: str) -> Any:
         consumer_key = self._consumer_token()
+        try:
+            date.fromisoformat(report_date)
+        except ValueError as exc:
+            raise ConfigError("report_date 必须是 YYYY-MM-DD 格式") from exc
         if self.state_file.exists():
             raise ConfigError(
                 f"已有活动租约：{self.state_file}；请先执行 complete 或 fail"
             )
-        response = self._request("POST", "/api/v1/reports/claim", consumer_key)
+        response = self._request(
+            "POST",
+            "/api/v1/reports/claim",
+            consumer_key,
+            {"reportDate": report_date},
+        )
         if response.status == 204:
             return {"claimed": False}
         data = response.data
@@ -341,7 +351,8 @@ def build_parser() -> argparse.ArgumentParser:
     push = commands.add_parser("push", help="提交日报 JSON 对象")
     push.add_argument("--idempotency-key", required=True)
     push.add_argument("--payload-file")
-    fetch = commands.add_parser("fetch", help="领取一条待处理日报")
+    fetch = commands.add_parser("fetch", help="按指定日期领取日报")
+    fetch.add_argument("--report-date", required=True)
     fetch.add_argument("--state-file")
     get = commands.add_parser("get", help="查询日报")
     get.add_argument("report_id")
@@ -384,7 +395,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "fetch":
             if args.state_file:
                 client.state_file = Path(args.state_file).expanduser()
-            result = client.fetch()
+            result = client.fetch(args.report_date)
         elif args.command == "get":
             result = client.get(args.report_id)
         elif args.command == "list":

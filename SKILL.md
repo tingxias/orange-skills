@@ -140,10 +140,10 @@ echo '{
 使用已配置的 Consumer Key 后，只执行一次 `fetch`。`fetch`、`complete`、`fail`、`get`、`list`、`append` 和 `modify` 不读取项目任务；执行这些命令时不得询问同步目录或项目范围。Key 缺失、失效或角色不匹配时停止并请求更新：
 
 ```bash
-python3 "$CLIENT" fetch
+python3 "$CLIENT" fetch --report-date 2026-07-30
 ```
 
-HTTP `204` 表示当前没有待处理日报，属于正常结果。HTTP `200` 会返回日报、`submissionKey` 和一次性 `leaseToken`；客户端同时将租约保存到权限为 `0600` 的 `claim.json`。本地存在租约状态时不要再次执行 `fetch`，下游系统未明确确认成功前也不要执行回执。
+`fetch` 必须明确提供目标日期。HTTP `204` 表示该日期没有待处理日报，属于正常结果；客户端不会改为领取其他日期。HTTP `200` 会返回日报、`submissionKey` 和一次性 `leaseToken`；客户端同时将租约保存到权限为 `0600` 的 `claim.json`。本地存在租约状态时不要再次执行 `fetch`，下游系统未明确确认成功前也不要执行回执。
 
 下游处理成功后执行：
 
@@ -164,7 +164,7 @@ python3 "$CLIENT" fail \
 
 发送者和获取者分开时，获取端也可以直接调用以下 HTTP 契约，不要求使用本客户端：
 
-- `POST /api/v1/reports/claim`：使用 `Authorization: Bearer <Consumer Key>` 领取一条日报。`204` 表示暂无任务；`200` 返回日报、`submissionKey` 和一次性 `leaseToken`。
+- `POST /api/v1/reports/claim`：使用 `Authorization: Bearer <Consumer Key>` 和 `{"reportDate":"YYYY-MM-DD"}` 请求体领取指定日期的日报。`204` 表示该日期暂无任务；`200` 返回日报、`submissionKey` 和一次性 `leaseToken`。
 - 下游系统填写成功后，调用 `POST /api/v1/reports/{id}/complete`，请求体只包含 `leaseToken`。
 - 下游系统填写失败后，调用 `POST /api/v1/reports/{id}/fail`，提交 `leaseToken`、`errorCode`、`errorMessage` 和 `retryable`。
 

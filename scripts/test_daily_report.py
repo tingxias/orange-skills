@@ -163,7 +163,7 @@ class ReportClientTests(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(ConfigError, "获取或回执.*consumer_key"):
-            client.fetch()
+            client.fetch("2026-07-30")
 
         self.assertEqual(FakeHandler.requests, [])
 
@@ -186,18 +186,19 @@ class ReportClientTests(unittest.TestCase):
             clear=True,
         ):
             client = load_client()
-            result = client.fetch()
+            result = client.fetch("2026-07-30")
 
         self.assertEqual(result, {"claimed": False})
         self.assertEqual(
             FakeHandler.requests[0][2]["Authorization"],
             "Bearer consumer-only-secret",
         )
+        self.assertEqual(json.loads(FakeHandler.requests[0][3]), {"reportDate": "2026-07-30"})
 
     def test_fetch_204_is_a_normal_empty_result(self):
         FakeHandler.responses["/api/v1/reports/claim"] = (204, None)
 
-        result = self.client.fetch()
+        result = self.client.fetch("2026-07-30")
 
         self.assertEqual(result, {"claimed": False})
         self.assertFalse(self.state_file.exists())
@@ -209,7 +210,7 @@ class ReportClientTests(unittest.TestCase):
         )
 
         with self.assertRaises(ConfigError):
-            self.client.fetch()
+            self.client.fetch("2026-07-30")
 
         self.assertEqual(FakeHandler.requests, [])
 
@@ -246,7 +247,7 @@ class ReportClientTests(unittest.TestCase):
             {"report": {"id": "report-1", "status": "submitted"}},
         )
 
-        claimed = self.client.fetch()
+        claimed = self.client.fetch("2026-07-30")
         state_mode = stat.S_IMODE(self.state_file.stat().st_mode)
         completed = self.client.complete()
 
@@ -264,7 +265,7 @@ class ReportClientTests(unittest.TestCase):
             200,
             {"report": {"id": "report-1", "status": "dead_letter"}},
         )
-        self.client.fetch()
+        self.client.fetch("2026-07-30")
 
         result = self.client.fail("DOWNSTREAM_BAD_DATA", "invalid field", retryable=False)
 
