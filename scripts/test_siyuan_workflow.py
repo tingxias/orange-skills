@@ -1,0 +1,90 @@
+import unittest
+from pathlib import Path
+
+
+SKILL_DIR = Path(__file__).resolve().parents[1]
+
+
+class SiyuanWorkflowSkillTests(unittest.TestCase):
+    def test_skill_uses_direct_note_storage_instead_of_relay_service(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+
+        self.assertIn("思源", skill)
+        self.assertIn("严格按日期", skill)
+        self.assertIn("Asia/Shanghai", skill)
+        self.assertNotIn("Producer Key", skill)
+        self.assertNotIn("Consumer Key", skill)
+        self.assertNotIn("leaseToken", skill)
+        self.assertNotIn("daily_report 服务", skill)
+        self.assertNotIn("python3", skill)
+
+    def test_skill_models_same_or_separate_execution_tools(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("同一运行端", skill)
+        self.assertIn("分开的运行端", skill)
+        self.assertIn("same_runtime", skill)
+        self.assertIn("separate_runtimes", skill)
+        self.assertIn("日报存储端", skill)
+        self.assertIn("公司系统写入端", skill)
+        self.assertIn("最终提交端", skill)
+        self.assertIn("same_tool", skill)
+        self.assertIn("separate_tools", skill)
+        self.assertIn("company_writer", schema)
+        self.assertIn("company_submitter", schema)
+        self.assertIn("auto_submit_after_write", schema)
+        self.assertIn("write_success_evidence", schema)
+        self.assertIn("submit_success_evidence", schema)
+
+    def test_missing_user_decisions_are_asked_and_persisted(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("只询问缺失", skill)
+        self.assertIn("用户明确回答", skill)
+        self.assertIn("立即持久化", skill)
+        self.assertIn("后续不再重复询问", skill)
+        self.assertIn("DAILY_REPORT_CONFIG", skill)
+        self.assertIn("workflow_mode", schema)
+        self.assertIn("project_scope", schema)
+        self.assertIn("report_store", schema)
+        self.assertIn("company_writer", schema)
+        self.assertIn("company_submitter", schema)
+        self.assertIn("field_mapping", schema)
+        self.assertIn("success_evidence", schema)
+        self.assertIn("authorization", schema)
+        self.assertIn("credential_ref", schema)
+        self.assertNotIn("credential\"", schema)
+
+    def test_exact_date_and_submission_receipt_rules_are_explicit(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+
+        self.assertIn("不得搜索或选择最新日报", skill)
+        self.assertIn("YYYY-MM-DD", skill)
+        self.assertIn("项目名称", skill)
+        self.assertIn("1.", skill)
+        self.assertIn("成功凭证", skill)
+        self.assertIn("已提交", skill)
+        self.assertIn("结果不确定", skill)
+        self.assertIn("不得重复提交", skill)
+        self.assertIn("写入成功不等于最终提交成功", skill)
+        self.assertIn("只有最终提交成功", skill)
+
+    def test_ui_metadata_matches_direct_workflow(self):
+        metadata = (SKILL_DIR / "agents" / "openai.yaml").read_text(encoding="utf-8")
+
+        self.assertIn("思源日报", metadata)
+        self.assertIn("公司系统", metadata)
+        self.assertIn("公司系统写入端", metadata)
+        self.assertIn("最终提交端", metadata)
+        self.assertNotIn("完整 Key", metadata)
+        self.assertNotIn("结构化日报服务", metadata)
+
+
+if __name__ == "__main__":
+    unittest.main()
