@@ -102,8 +102,18 @@ class SiyuanWorkflowSkillTests(unittest.TestCase):
         self.assertIn("全部通过思源笔记 MCP", skill)
         self.assertIn("report_store.transport", schema)
         self.assertIn("siyuan_mcp", schema)
-        self.assertIn("不调用中间日报服务客户端作为这些操作的入口", skill)
+        self.assertIn("思源 MCP 是唯一日报存储入口", skill)
         self.assertNotIn("中间服务作为日报读写入口", skill)
+
+    def test_legacy_relay_configuration_is_removed_not_ignored(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("立即删除", skill)
+        self.assertIn("不读取、不迁移、不回退", skill)
+        self.assertIn("不得保留旧配置文件", schema)
 
     def test_ui_metadata_matches_direct_workflow(self):
         metadata = (SKILL_DIR / "agents" / "openai.yaml").read_text(encoding="utf-8")

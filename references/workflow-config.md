@@ -71,7 +71,7 @@
 - `local_roles`：从 `report_store`、`company_writer`、`company_submitter` 中选择一个或多个。分开的运行端只执行自己已保存的角色。
 - `company_action_mode`：公司系统写入端与最终提交端使用同一工具时为 `same_tool`，使用不同工具时为 `separate_tools`。
 - `report_format.required_fields` 固定必须包含 `number`、`date`、`progress`、`customer_or_project`，不能通过配置删除、替换或设为可选。`progress_format` 可为状态、百分比或二者并用，但不能省略完成进度。
-- `report_store.transport` 固定为 `siyuan_mcp`。创建、追加、修改、查询和获取个人日报均通过思源笔记 MCP 完成；旧中间服务配置不改变此规则。
+- `report_store.transport` 固定为 `siyuan_mcp`。创建、追加、修改、查询和获取个人日报均通过思源笔记 MCP 完成；思源 MCP 是唯一日报存储入口。
 - `handoff_mode.report_to_writer`：`shared_report_store` 或 `explicit_payload`。后者必须传递明确日期和本次日报正文，不能传递“最新日报”。
 - `handoff_mode.writer_to_submitter`：优先使用 `record_reference`；若只能使用 `explicit_payload`，必须包含目标日期、目标系统和已验证的写入结果，不能包含秘密。
 
@@ -90,4 +90,6 @@
 
 ## 更新与迁移
 
-用户修改某一项时只更新该项，保留其它已确认字段和未知字段。旧配置中的 `base_url`、Producer/Consumer Key 或租约字段不参与当前思源直连流程，但不得未经用户要求自动删除。采用临时文件和原子替换写入，随后检查 `0600` 权限并回读 JSON；写入失败或结果不确定时先重新读取状态，不能盲目覆盖。
+用户修改某一项时只更新该项，保留其它已确认字段和未知字段。旧版服务地址、角色密钥、租约状态和客户端配置已经停用；发现旧配置文件或这些字段时必须删除，不读取、不迁移、不回退。采用临时文件和原子替换写入，随后检查 `0600` 权限并回读 JSON；写入失败或结果不确定时先重新读取状态，不能盲目覆盖。
+
+不得保留旧配置文件。删除后如需继续使用日报，只能按本文件的 `workflow` 结构重新建立思源 MCP 配置。
