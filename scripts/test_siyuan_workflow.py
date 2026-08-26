@@ -75,6 +75,36 @@ class SiyuanWorkflowSkillTests(unittest.TestCase):
         self.assertIn("写入成功不等于最终提交成功", skill)
         self.assertIn("只有最终提交成功", skill)
 
+    def test_fixed_report_fields_are_mandatory(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("固定必填字段", skill)
+        self.assertIn("编号", skill)
+        self.assertIn("日期", skill)
+        self.assertIn("完成进度", skill)
+        self.assertIn("客户/项目名称", skill)
+        self.assertIn("缺一不可", skill)
+        self.assertIn("report_format", schema)
+        self.assertIn("required_fields", schema)
+        self.assertIn("progress_format", schema)
+        self.assertIn("不能通过配置取消", skill)
+
+    def test_all_report_operations_route_through_siyuan_mcp(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("推送（创建/写入）、追加、修改、查询和获取", skill)
+        self.assertIn("全部通过思源笔记 MCP", skill)
+        self.assertIn("report_store.transport", schema)
+        self.assertIn("siyuan_mcp", schema)
+        self.assertIn("不调用中间日报服务客户端作为这些操作的入口", skill)
+        self.assertNotIn("中间服务作为日报读写入口", skill)
+
     def test_ui_metadata_matches_direct_workflow(self):
         metadata = (SKILL_DIR / "agents" / "openai.yaml").read_text(encoding="utf-8")
 
