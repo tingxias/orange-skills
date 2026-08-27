@@ -115,6 +115,13 @@ class SiyuanWorkflowSkillTests(unittest.TestCase):
         self.assertIn("不读取、不迁移、不回退", skill)
         self.assertIn("不得保留旧配置文件", schema)
 
+    def test_mcp_discovery_precedes_workflow_config_check(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+
+        self.assertIn("先发现并初始化思源 MCP", skill)
+        self.assertIn("`workflow` 配置缺失不等于思源 MCP 不可用", skill)
+        self.assertIn("区分配置缺失、未初始化、鉴权失败和连接失败", skill)
+
     def test_ui_metadata_matches_direct_workflow(self):
         metadata = (SKILL_DIR / "agents" / "openai.yaml").read_text(encoding="utf-8")
 
