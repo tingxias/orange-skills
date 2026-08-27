@@ -120,6 +120,17 @@ class SiyuanWorkflowSkillTests(unittest.TestCase):
         self.assertIn("用户明确要求读取 Git", skill)
         self.assertIn("不得自行改用 Git", skill)
 
+    def test_projects_without_today_conversations_are_skipped(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("没有今天的对话记录时直接跳过项目", skill)
+        self.assertIn("不生成空项目块", skill)
+        self.assertIn("不回退到 Git", skill)
+        self.assertIn('"skip_without_today_conversation": true', schema)
+
     def test_append_and_modify_preserve_unrelated_content(self):
         skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
 

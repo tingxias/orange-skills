@@ -1,0 +1,7 @@
+interface:
+  display_name: "Yonyou Skill"
+  short_description: "NC65接口、单据转换与业务动作开发经验"
+  default_prompt: "Use $yonyou-skill to implement or review an NC65 interface, bill conversion, or business action change."
+
+policy:
+  allow_implicit_invocation: true

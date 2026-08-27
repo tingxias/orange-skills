@@ -40,7 +40,8 @@
     },
     "project_scope": {
       "mode": "all",
-      "project_roots": []
+      "project_roots": [],
+      "skip_without_today_conversation": true
     }
   }
 }
@@ -96,6 +97,7 @@
 - `local_roles`：从 `report_store`、`company_writer`、`company_submitter` 中选择一个或多个。分开的运行端只执行自己已保存的角色。
 - `company_delivery.company_action_mode`：公司系统写入端与最终提交端使用同一工具时为 `same_tool`，使用不同工具时为 `separate_tools`。
 - `report_format.required_sections` 固定包含 `today_work` 和 `tomorrow_plan`。今日工作使用独立项目块；明日计划使用独立一级区域和独立编号，不得嵌套进项目块。`report_format.required_fields` 固定必须包含 `number`、`date`、`progress`、`customer_or_project`，不能通过配置删除、替换或设为可选。`progress_format` 可为状态、百分比或二者并用，但不能省略完成进度。`layout` 固定为 `block`，`item_separator` 固定为 `blank_line`；字段必须分行，禁止使用 `｜` 拼成单行。`grouping` 固定为 `one_block_per_project`，项目名作为块标题；同一项目的多条工作放入块内有序列表，不重复创建同名项目块。
+- `project_scope.skip_without_today_conversation` 固定为 `true`：项目在本次统计目标工作日没有对话记录时，跳过该项目的今日工作和明日计划输入；不使用任务记录、Git、其他日期或最近对话补齐，也不删除日报已有历史内容。
 - `report_store.mcp_name` 必须由用户首次明确确认，推荐默认值为 `siyuan-sisyphus`；确认后同时持久化 `mcp_name_confirmed=true` 并按此名称发现工具。仅有默认名称但缺少确认状态时仍需询问用户。`report_store.transport` 固定为 `siyuan_mcp`。创建、追加、修改、查询和获取个人日报均通过思源笔记 MCP 完成；思源 MCP 是唯一日报存储入口。
 - `company_delivery.write_after_explicit_request` 固定为 `direct`：用户已明确要求公司系统写入且必要配置齐全时直接写入，不再追加一次“是否写入”确认。
 - `company_delivery.handoff_mode.report_to_writer`：`shared_report_store` 或 `explicit_payload`。后者必须传递明确日期和本次日报正文，不能传递“最新日报”。
@@ -114,7 +116,7 @@
 
 普通思源推送首次必须让用户明确确认思源 MCP 名称，推荐 `siyuan-sisyphus`；确认后持久化，后续不再询问。其它时候只询问当前操作缺少的日期、思源目标、读写能力、授权和必填日报字段。只有用户明确要求公司系统操作时，才询问角色布局、写入/提交是否同工具、具体工具和目标、字段映射、两个阶段的成功凭证、自动提交和状态回写。日报模板缺失时直接采用默认值“工作日报-鲁中客成-运维”，不单独询问；用户可以修改模板名称。用户已经明确要求公司系统写入且必要信息齐全时直接写入，不再询问是否写入。用户没有明确回答且没有规定默认值的字段保持缺失，不能猜测后写入配置。
 
-目标日报日期与项目记录的统计范围必须分别计算：相对日期按 `Asia/Shanghai` 解析，“截至昨天的本周总结”以昨天为目标日报日期、以本周一至昨天为统计范围。默认读取当前工具的项目对话记录和任务记录；只有用户明确要求时才读取 Git。统计范围和数据来源只出现在执行回执中，不写入日报正文或标题。
+目标日报日期与项目记录的统计范围必须分别计算：相对日期按 `Asia/Shanghai` 解析，“截至昨天的本周总结”以昨天为目标日报日期、以本周一至昨天为统计范围。默认读取当前工具的项目对话记录和任务记录；项目没有本次统计目标工作日的对话时直接跳过，不生成空项目块或明日计划，不回退到其他日期或 Git。只有用户明确要求时才读取 Git。统计范围和数据来源只出现在执行回执中，不写入日报正文或标题。
 
 创建、追加和修改采用保留式写入：先完整读取原文，今日工作追加时按项目合并，明日计划追加时只写入独立的“明日计划”区域；修改时只变更目标项目、事项或计划，写入前后确认非目标内容未减少。全文覆盖、重写或清空只能由用户明确提出，不能作为普通推送、追加或修改的实现方式。
 
