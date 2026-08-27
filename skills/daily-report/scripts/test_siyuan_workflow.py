@@ -104,6 +104,49 @@ class SiyuanWorkflowSkillTests(unittest.TestCase):
         self.assertIn('"layout": "block"', schema)
         self.assertIn('"item_separator": "blank_line"', schema)
 
+    def test_target_report_date_is_separate_from_source_window(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+
+        self.assertIn("目标日报日期", skill)
+        self.assertIn("统计范围", skill)
+        self.assertIn("截至昨天的本周总结", skill)
+        self.assertIn("写入昨天", skill)
+        self.assertIn("执行当天", skill)
+
+    def test_project_conversations_are_default_source_instead_of_git(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+
+        self.assertIn("项目对话记录和任务记录", skill)
+        self.assertIn("用户明确要求读取 Git", skill)
+        self.assertIn("不得自行改用 Git", skill)
+
+    def test_append_and_modify_preserve_unrelated_content(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+
+        self.assertIn("完整读取并保存原文快照", skill)
+        self.assertIn("保留全部原有内容", skill)
+        self.assertIn("只修改用户指定的项目或事项", skill)
+        self.assertIn("原有非目标内容没有减少", skill)
+        self.assertIn("明确要求“覆盖”“重写”或“清空”", skill)
+
+    def test_project_name_is_title_and_same_project_is_grouped(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("同一项目的多条工作合并为一个项目块", skill)
+        self.assertIn("工作内容在项目块内按序号列出", skill)
+        self.assertIn('"item_template": "### {number}. {customer_or_project}', schema)
+        self.assertNotIn('"item_template": "### {number}. 日报事项', schema)
+
+    def test_source_window_is_not_written_as_report_heading(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+
+        self.assertIn("统计范围只用于筛选数据和结果回执", skill)
+        self.assertIn("不得写入日报正文或标题", skill)
+        self.assertIn("对话记录补充", skill)
+
     def test_all_report_operations_route_through_siyuan_mcp(self):
         skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
         schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
