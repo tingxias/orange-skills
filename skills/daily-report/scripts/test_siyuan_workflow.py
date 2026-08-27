@@ -195,6 +195,55 @@ class SiyuanWorkflowSkillTests(unittest.TestCase):
         self.assertIn("`workflow` 配置缺失不等于思源 MCP 不可用", skill)
         self.assertIn("区分配置缺失、未初始化、鉴权失败和连接失败", skill)
 
+    def test_siyuan_mcp_name_is_confirmed_once_and_persisted(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("思源 MCP 名称", skill)
+        self.assertIn("首次明确确认", skill)
+        self.assertIn("siyuan-sisyphus", skill)
+        self.assertIn('"mcp_name": "siyuan-sisyphus"', schema)
+        self.assertIn('"mcp_name_confirmed": true', schema)
+        self.assertIn("mcp_name_confirmed=true", skill)
+        self.assertIn("确认后立即持久化", skill)
+
+    def test_company_write_does_not_ask_for_a_second_confirmation(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("不再询问是否写入", skill)
+        self.assertIn("直接执行写入", skill)
+        self.assertIn('"write_after_explicit_request": "direct"', schema)
+
+    def test_company_template_has_an_overridable_default(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("工作日报-鲁中客成-运维", skill)
+        self.assertIn('"template_name": "工作日报-鲁中客成-运维"', schema)
+        self.assertIn("用户可以修改模板名称", skill)
+        self.assertIn("后续直接复用", skill)
+
+    def test_tomorrow_plan_is_a_separate_report_section(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("## 今日工作", skill)
+        self.assertIn("## 明日计划", skill)
+        self.assertIn("完全独立", skill)
+        self.assertIn("相对于日报日期", skill)
+        self.assertIn('"required_sections": ["today_work", "tomorrow_plan"]', schema)
+        self.assertIn('"tomorrow_plan_template": "## 明日计划', schema)
+        self.assertIn("整个明日计划区域", skill)
+
     def test_ui_metadata_matches_direct_workflow(self):
         metadata = (SKILL_DIR / "agents" / "openai.yaml").read_text(encoding="utf-8")
 
