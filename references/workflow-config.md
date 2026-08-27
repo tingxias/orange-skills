@@ -13,7 +13,9 @@
     "report_format": {
       "required_fields": ["number", "date", "progress", "customer_or_project"],
       "progress_format": "status_or_percentage",
-      "item_template": "{number}. 日期：{date}｜客户/项目名称：{customer_or_project}｜完成进度：{progress}｜工作内容：{summary}"
+      "layout": "block",
+      "item_separator": "blank_line",
+      "item_template": "### {number}. 日报事项\n\n- 日期：{date}\n- 客户/项目名称：{customer_or_project}\n- 完成进度：{progress}\n- 工作内容：{summary}"
     },
     "report_store": {
       "tool_ref": "逻辑工具标识",
@@ -70,7 +72,7 @@
 - `workflow_mode`：`same_runtime` 或 `separate_runtimes`。
 - `local_roles`：从 `report_store`、`company_writer`、`company_submitter` 中选择一个或多个。分开的运行端只执行自己已保存的角色。
 - `company_action_mode`：公司系统写入端与最终提交端使用同一工具时为 `same_tool`，使用不同工具时为 `separate_tools`。
-- `report_format.required_fields` 固定必须包含 `number`、`date`、`progress`、`customer_or_project`，不能通过配置删除、替换或设为可选。`progress_format` 可为状态、百分比或二者并用，但不能省略完成进度。
+- `report_format.required_fields` 固定必须包含 `number`、`date`、`progress`、`customer_or_project`，不能通过配置删除、替换或设为可选。`progress_format` 可为状态、百分比或二者并用，但不能省略完成进度。`layout` 固定为 `block`，`item_separator` 固定为 `blank_line`；字段必须分行，禁止使用 `｜` 拼成单行。
 - `report_store.transport` 固定为 `siyuan_mcp`。创建、追加、修改、查询和获取个人日报均通过思源笔记 MCP 完成；思源 MCP 是唯一日报存储入口。
 - `handoff_mode.report_to_writer`：`shared_report_store` 或 `explicit_payload`。后者必须传递明确日期和本次日报正文，不能传递“最新日报”。
 - `handoff_mode.writer_to_submitter`：优先使用 `record_reference`；若只能使用 `explicit_payload`，必须包含目标日期、目标系统和已验证的写入结果，不能包含秘密。

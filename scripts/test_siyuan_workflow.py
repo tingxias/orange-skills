@@ -92,6 +92,18 @@ class SiyuanWorkflowSkillTests(unittest.TestCase):
         self.assertIn("progress_format", schema)
         self.assertIn("不能通过配置取消", skill)
 
+    def test_report_items_use_spaced_blocks_not_compact_inline_text(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("每条事项独立成块", skill)
+        self.assertIn("字段分行", skill)
+        self.assertIn("不要使用 `｜`", skill)
+        self.assertIn('"layout": "block"', schema)
+        self.assertIn('"item_separator": "blank_line"', schema)
+
     def test_all_report_operations_route_through_siyuan_mcp(self):
         skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
         schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
