@@ -117,6 +117,24 @@ class SiyuanWorkflowSkillTests(unittest.TestCase):
         self.assertIn("思源 MCP 是唯一日报存储入口", skill)
         self.assertNotIn("中间服务作为日报读写入口", skill)
 
+    def test_push_means_siyuan_write_without_company_tools(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
+            encoding="utf-8"
+        )
+        metadata = (SKILL_DIR / "agents" / "openai.yaml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("用户只说“推送”", skill)
+        self.assertIn("只执行思源日报存储阶段", skill)
+        self.assertIn("不得要求公司系统工具", skill)
+        self.assertIn("精确回读一致后即可报告推送成功", skill)
+        self.assertIn("只有用户明确要求写入或提交公司系统", skill)
+        self.assertIn('"company_delivery_enabled": false', schema)
+        self.assertIn("公司系统配置不是思源推送的前置条件", schema)
+        self.assertIn("明确要求公司系统", metadata)
+
     def test_legacy_relay_configuration_is_removed_not_ignored(self):
         skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
         schema = (SKILL_DIR / "references" / "workflow-config.md").read_text(
@@ -139,8 +157,7 @@ class SiyuanWorkflowSkillTests(unittest.TestCase):
 
         self.assertIn("思源日报", metadata)
         self.assertIn("公司系统", metadata)
-        self.assertIn("公司系统写入端", metadata)
-        self.assertIn("最终提交端", metadata)
+        self.assertIn("明确要求公司系统", metadata)
         self.assertNotIn("完整 Key", metadata)
         self.assertNotIn("结构化日报服务", metadata)
 

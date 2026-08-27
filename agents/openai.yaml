@@ -1,4 +1,4 @@
 interface:
   display_name: "思源日报编排"
-  short_description: "按日期通过思源 MCP 维护日报并编排提交"
-  default_prompt: "使用 $daily-report 通过思源笔记 MCP 按明确日期创建、查询、追加或修改个人日报；每条必须包含编号、日期、完成进度和客户或项目名称，并按已确认的公司系统写入端与最终提交端完成后续处理。"
+  short_description: "按日期通过思源 MCP 推送和维护日报"
+  default_prompt: "使用 $daily-report 通过思源笔记 MCP 按明确日期推送、查询、追加或修改个人日报；只有我明确要求公司系统操作时，才继续写入或提交公司系统。"

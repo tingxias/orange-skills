@@ -34,8 +34,7 @@ class SkillLocaleTests(unittest.TestCase):
         self.assertNotIn("daily_report 服务", skill)
         self.assertNotIn("python3", skill)
         self.assertIn("思源日报编排", metadata)
-        self.assertIn("公司系统写入端", metadata)
-        self.assertIn("最终提交端", metadata)
+        self.assertIn("明确要求公司系统", metadata)
         self.assertNotIn("完整 Key", metadata)
 
 

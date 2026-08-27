@@ -6,10 +6,9 @@
 {
   "workflow": {
     "workflow_mode": "same_runtime",
-    "local_roles": ["report_store", "company_writer", "company_submitter"],
-    "company_action_mode": "same_tool",
+    "local_roles": ["report_store"],
+    "company_delivery_enabled": false,
     "timezone": "Asia/Shanghai",
-    "auto_submit_after_write": true,
     "report_format": {
       "required_fields": ["number", "date", "progress", "customer_or_project"],
       "progress_format": "status_or_percentage",
@@ -26,6 +25,27 @@
       "notebook": "工作",
       "path_template": "/工作/daily note/YYYY/MM/YYYY-MM-DD"
     },
+    "authorization": {
+      "read_projects": true,
+      "read_report": true,
+      "write_report": true
+    },
+    "project_scope": {
+      "mode": "all",
+      "project_roots": []
+    }
+  }
+}
+```
+
+只有用户明确要求公司系统操作时，才在 `workflow` 中增加以下可选配置：
+
+```json
+{
+  "company_delivery_enabled": true,
+  "company_delivery": {
+    "company_action_mode": "same_tool",
+    "auto_submit_after_write": true,
     "company_writer": {
       "tool_ref": "逻辑工具标识",
       "credential_ref": "工具连接配置中的凭据引用，可省略",
@@ -52,16 +72,9 @@
       "next_steps": "用户确认的后续计划字段"
     },
     "authorization": {
-      "read_projects": true,
-      "read_report": true,
-      "write_report": true,
       "write_company_system": true,
       "submit_company_system": true,
       "write_status_marker": true
-    },
-    "project_scope": {
-      "mode": "all",
-      "project_roots": []
     }
   }
 }
@@ -69,26 +82,27 @@
 
 ## 角色与布局
 
+- `company_delivery_enabled` 默认为 `false`。公司系统配置不是思源推送的前置条件；普通“推送日报”在思源写入并精确回读成功后即完成。
 - `workflow_mode`：`same_runtime` 或 `separate_runtimes`。
 - `local_roles`：从 `report_store`、`company_writer`、`company_submitter` 中选择一个或多个。分开的运行端只执行自己已保存的角色。
-- `company_action_mode`：公司系统写入端与最终提交端使用同一工具时为 `same_tool`，使用不同工具时为 `separate_tools`。
+- `company_delivery.company_action_mode`：公司系统写入端与最终提交端使用同一工具时为 `same_tool`，使用不同工具时为 `separate_tools`。
 - `report_format.required_fields` 固定必须包含 `number`、`date`、`progress`、`customer_or_project`，不能通过配置删除、替换或设为可选。`progress_format` 可为状态、百分比或二者并用，但不能省略完成进度。`layout` 固定为 `block`，`item_separator` 固定为 `blank_line`；字段必须分行，禁止使用 `｜` 拼成单行。
 - `report_store.transport` 固定为 `siyuan_mcp`。创建、追加、修改、查询和获取个人日报均通过思源笔记 MCP 完成；思源 MCP 是唯一日报存储入口。
-- `handoff_mode.report_to_writer`：`shared_report_store` 或 `explicit_payload`。后者必须传递明确日期和本次日报正文，不能传递“最新日报”。
-- `handoff_mode.writer_to_submitter`：优先使用 `record_reference`；若只能使用 `explicit_payload`，必须包含目标日期、目标系统和已验证的写入结果，不能包含秘密。
+- `company_delivery.handoff_mode.report_to_writer`：`shared_report_store` 或 `explicit_payload`。后者必须传递明确日期和本次日报正文，不能传递“最新日报”。
+- `company_delivery.handoff_mode.writer_to_submitter`：优先使用 `record_reference`；若只能使用 `explicit_payload`，必须包含目标日期、目标系统和已验证的写入结果，不能包含秘密。
 
 ## 能力与成功凭证
 
 - `report_store` 必须声明可读、可写能力。只有读取能力时可以查询，不能创建、追加、修改或回写状态。
-- `company_writer` 必须保存目标系统、表单或模板、字段映射，以及至少一种 `write_success_evidence`。写入成功只表示内容已填入或保存，不表示已最终提交。
-- `company_submitter` 必须保存至少一种 `submit_success_evidence`。只有该凭证验证通过才允许写“已提交”。
-- `auto_submit_after_write=true` 仅在写入验证成功、最终提交端可用且 `submit_company_system=true` 时生效。
+- `company_delivery.company_writer` 只在用户明确要求写入公司系统时需要，必须保存目标系统、表单或模板、字段映射，以及至少一种 `write_success_evidence`。
+- `company_delivery.company_submitter` 只在用户明确要求最终提交时需要，必须保存至少一种 `submit_success_evidence`。只有该凭证验证通过才允许写“已提交”。
+- `company_delivery.auto_submit_after_write=true` 仅在当前请求已明确进入公司系统流程、写入验证成功、最终提交端可用且 `submit_company_system=true` 时生效；普通思源推送不得触发。
 - `auto_mark_submitted=true` 仅在最终提交成功后生效；不授权删除、移动、批量修改或权限变更。
 - `credential_ref` 只指向环境变量、工具连接或安全凭据管理器，不得包含实际凭据值。
 
 ## 需要用户明确决定的字段
 
-当前操作用到且尚未配置时才询问：角色布局、当前运行端角色、写入/提交是否同工具、具体工具和目标、日报模板、字段映射、两个阶段的成功凭证、自动提交、状态回写、持久授权以及首次项目范围。用户没有明确回答的字段保持缺失，不能猜测后写入配置。
+普通思源推送只询问当前操作缺少的日期、思源目标、读写能力、授权和必填日报字段。只有用户明确要求公司系统操作时，才询问角色布局、写入/提交是否同工具、具体工具和目标、日报模板、字段映射、两个阶段的成功凭证、自动提交和状态回写。用户没有明确回答的字段保持缺失，不能猜测后写入配置。
 
 ## 更新与迁移
 
